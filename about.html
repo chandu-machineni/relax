@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A quiet space to sit, breathe, and stop doing. Set a timer and take a moment away from the noise." />
+  
+  <!-- Open Graph / Social Media -->
+  <meta property="og:title" content="Relax." />
+  <meta property="og:description" content="A quiet space to sit, breathe, and stop doing. Set a timer and take a moment away from the noise." />
+  <meta property="og:type" content="website" />
+  <meta property="twitter:title" content="Relax." />
+  <meta property="twitter:description" content="A quiet space to sit, breathe, and stop doing. Set a timer and take a moment away from the noise." />
+  
+  <title>About | Relax. A quiet timer for doing nothing.</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍃</text></svg>">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .about-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      text-align: left;
+      font-size: 18px;
+      line-height: 1.6;
+      color: #ffffff;
+    }
+    
+    .about-container p {
+      margin-bottom: 20px;
+      margin-top: 20px;
+    }
+    
+    .about-container .italic-gray {
+      font-style: italic;
+      color: #aaaaaa;
+      margin-bottom: 0;
+    }
+    
+    .about-container .bold {
+      font-weight: bold;
+    }
+    
+    .about-container .italic {
+      font-style: italic;
+    }
+    
+    .cloud-emoji {
+      font-size: 32px;
+      display: block;
+      margin: 0;
+      text-align: left;
+    }
+    
+    .back-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      text-decoration: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background-color: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: #ffffff;
+      transition: 0.3s all;
+    }
+    
+    .back-link:hover {
+      background-color: #ffffff;
+      color: #000000;
+    }
+    
+    .back-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+    }
+    
+    /* Reset specific paragraph margins */
+    .about-container p:first-of-type {
+      margin-top: 0;
+    }
+    
+    /* Remove top margin for specific paragraphs */
+    .about-container p.no-top-margin {
+      margin-top: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="about-container">
+    <a href="/" class="back-link">
+      <span class="back-arrow">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+        </svg>
+      </span>
+    </a>
+    
+    <p><span class="bold">Relax.</span> is a tiny, quiet space on the internet.</p>
+    
+    <p>This app was built as a reminder:<br>
+    You don't have to be productive right now.</p>
+    
+    <p>The world constantly demands attention. But this?<br>
+    This is a little corner that asks nothing of you.</p>
+    
+    <p class="italic-gray">Why Relax?</p>
+    <p class="no-top-margin">Relax isn't about being <span class="italic">chill</span> in an Instagram way. It's about stopping.<br>
+    Stopping the need to optimize, to impress, to perform.<br>
+    Even for just a minute.</p>
+    
+    <p>You might call it a minimalist alarm clock. Or a meditation timer.<br>
+    But honestly, it's just a soft tool to help you sit down and be.</p>
+    
+    <p class="italic-gray">A note on simplicity.</p>
+    <p class="no-top-margin">People say things are <span class="italic">brutally simple.</span> But maybe it's more like <span class="italic">peacefully simple.</span><br>
+    This app isn't trying to be clever. It's not trying to keep you engaged.</p>
+    
+    <p>It's just a quiet page with a timer, a sound, and a place to relax.</p>
+    
+    <p class="italic">And if all this page does is remind you to sit, breathe, and not do, even for a moment,<br>
+    then that's more than enough.<br>
+    The rest of the world can wait.</p>
+    
+    <p>If this space helps you breathe a little easier, I've done my job.<br>
+    Thanks for being here. Come back any time.</p>
+    
+    <div class="cloud-emoji">☁️</div>
+  </div>
+  
+  <script>
+    // Enable the about page to be accessible via the /about route
+    if (window.location.pathname === '/about') {
+      // Already on the about page, no need to do anything
+    } else if (window.location.pathname.endsWith('/about.html')) {
+      // If accessed directly via about.html, do nothing
+    } else {
+      // Redirect to home if accessed via an incorrect route
+      window.location.href = '/';
+    }
+  </script>
+</body>
+</html> 
