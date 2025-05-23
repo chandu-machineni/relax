@@ -1,5 +1,6 @@
 // Add stylesheet
 document.head.innerHTML += '<link rel="stylesheet" href="styles.css">';
+document.head.innerHTML += '<title>relax</title>';
 
 // Audio service
 const AudioService = {
@@ -351,7 +352,7 @@ function createText(content, options = {}) {
 // Component: Footer
 function createFooter() {
   const footer = createElement('footer', 'footer');
-  const text = createText('Made by <a href="https://www.linkedin.com/in/chandu-machineni" target="_blank"><span>chandu machineni</span></a>', { size: 'xs', align: 'center' });
+  const text = createText('Made by <a href="https://www.linkedin.com/in/chandu-machineni" target="_blank">chandu machineni</a>', { size: 'xs', align: 'center' });
   footer.appendChild(text);
   return footer;
 }
@@ -367,6 +368,12 @@ const Views = {
     const view = createElement('div', ['view']);
     
     const homepageContent = createElement('div', 'homepage-content');
+    
+    // Add header with italicized "relax" text
+    const header = createElement('div', 'header');
+    const headerText = createText('<em>relax</em>', { size: 'l', align: 'center', customClass: 'app-title' });
+    header.appendChild(headerText);
+    homepageContent.appendChild(header);
     
     const container = createElement('div', 'main-container');
     
@@ -421,6 +428,12 @@ const Views = {
   instructions(onNext) {
     const view = createElement('div', ['view', 'instructions-view']);
     
+    // Add header with italicized "relax" text
+    const header = createElement('div', 'header');
+    const headerText = createText('<em>relax</em>', { size: 'l', align: 'center', customClass: 'app-title' });
+    header.appendChild(headerText);
+    view.appendChild(header);
+    
     const instructionsContainer = createElement('div', 'instructions-container');
     
     const instructionsText = createText("<strong>Important: please don't lock your screen.</strong><br/>(We need this for the page to work.)<br/><br/>Don't rush to get up.<br/><br/>I'll play a sound to let you know that the timer has expired and every minute after that, so you don't lose track of time.<br/><br/>Enjoy.", { size: 's', align: 'left' });
@@ -464,6 +477,12 @@ const Views = {
   
   active(onNext) {
     const view = createElement('div', ['view']);
+    
+    // Add header with italicized "relax" text
+    const header = createElement('div', 'header');
+    const headerText = createText('<em>relax</em>', { size: 'l', align: 'center', customClass: 'app-title' });
+    header.appendChild(headerText);
+    view.appendChild(header);
     
     const timeDisplay = createText('', { dimmed: true, size: 'xs', inline: true });
     view.appendChild(timeDisplay);
@@ -587,6 +606,12 @@ const Views = {
   complete(onNext) {
     const view = createElement('div', ['view']);
     
+    // Add header with italicized "relax" text
+    const header = createElement('div', 'header');
+    const headerText = createText('<em>relax</em>', { size: 'l', align: 'center', customClass: 'app-title' });
+    header.appendChild(headerText);
+    view.appendChild(header);
+    
     // Make sure the timer is stopped and audio is fully destroyed
     Store.stop();
     AudioService.destroy();
@@ -597,7 +622,7 @@ const Views = {
     thankYouSection.appendChild(thankYouText);
     
     const linkList = createElement('div', 'link-list');
-    const aboutLink = createText('<a target="_blank" href="/about">About</a>', { 
+    const aboutLink = createText('<a href="/about">About</a>', { 
       inline: true, size: 's' 
     });
     const sayHiLink = createText('<a target="_blank" href="https://www.linkedin.com/in/chandu-machineni">Say Hi</a>', { 
