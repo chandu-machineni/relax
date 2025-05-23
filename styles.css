@@ -201,6 +201,12 @@ html {
   text-align: center;
 }
 
+@media all and (max-width: 800px) {
+  .footer .text {
+    font-size: 16px;
+  }
+}
+
 .footer a {
   text-decoration: none;
   font-style: unset;
@@ -221,7 +227,7 @@ html {
   justify-content: center;
   width: 100%;
   max-width: 600px;
-  padding: 0 20px 80px;
+  padding: 0 20px;
 }
 
 @media all and (max-width: 800px) {
@@ -288,6 +294,12 @@ html {
   margin: 0;
 }
 
+@media all and (min-width: 801px) {
+  .instructions-container .text {
+    font-size: 28px;
+  }
+}
+
 .instructions-container .button {
   margin-top: 48px;
   width: 100%;
@@ -332,12 +344,31 @@ html {
   margin: 0 auto;
 }
 
+/* Animation classes */
 .view-entering {
-  animation: view-enter 0.5s;
+  animation: view-enter 1.2s;
 }
 
 .view-exiting {
-  animation: view-exit 0.3s;
+  animation: view-exit 1.2s;
+}
+
+@keyframes view-enter {
+  0% {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes view-exit {
+  0% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 /* Main view specific styles */
@@ -356,6 +387,7 @@ html {
   align-items: center;
   justify-content: center;
   font-size: 24px;
+  padding-top: 12px;
 }
 
 @media all and (max-width: 600px) {
@@ -401,24 +433,6 @@ html {
   justify-content: center;
   width: 100%;
   text-align: center;
-}
-
-@keyframes view-enter {
-  0% {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes view-exit {
-  0% {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
 }
 
 .link-list {

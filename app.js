@@ -6,13 +6,13 @@ const AudioService = {
   audioElement: null,
   audioContext: null,
   gongBuffer: null,
-  // Use a real gong sound (base64 encoded)
-  gongSound: 'https://soundbible.com/grab.php?id=1815&type=mp3',
+  // Use local gong sound file instead of remote URL (to avoid CORS issues)
+  gongSound: 'gong.mp3',
   lastPlayTime: 0,
   
   init() {
     console.log('Initializing audio service');
-    // Always create a new audio element
+    // Clean up any previous instance
     this.destroy();
     this.createAudio();
     
@@ -20,6 +20,13 @@ const AudioService = {
     try {
       if (typeof AudioContext !== 'undefined') {
         this.audioContext = new AudioContext();
+        
+        // Track all audio contexts created for cleanup
+        if (!window.audioContextsToClose) {
+          window.audioContextsToClose = [];
+        }
+        window.audioContextsToClose.push(this.audioContext);
+        
         // Preload the gong sound for Web Audio API
         this.loadGongSound();
       }
@@ -33,7 +40,12 @@ const AudioService = {
     if (!this.audioContext) return;
     
     fetch(this.gongSound)
-      .then(response => response.arrayBuffer())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.arrayBuffer();
+      })
       .then(arrayBuffer => this.audioContext.decodeAudioData(arrayBuffer))
       .then(audioBuffer => {
         this.gongBuffer = audioBuffer;
@@ -66,10 +78,17 @@ const AudioService = {
       this.audioElement.pause();
       this.audioElement.currentTime = 0;
       this.audioElement.volume = 1.0; // Maximum volume
+      
+      // Also ensure Web Audio API is ready if available
+      if (this.audioContext && this.audioContext.state === 'suspended') {
+        await this.audioContext.resume();
+      }
+      
       console.log('Audio element armed.');
     } catch(e) {
-      console.log('Arm sound failed, but continuing');
+      console.log('Arm sound failed, but continuing', e);
     }
+    return Promise.resolve(); // Always resolve to continue the flow
   },
   
   async play() {
@@ -107,61 +126,71 @@ const AudioService = {
       // Try to recover by reinitializing
       this.init();
     }
+    return Promise.resolve(); // Always resolve to continue the flow
   },
   
   playResonantGong() {
     console.log('Playing resonant gong with Web Audio API');
     if (!this.audioContext || !this.gongBuffer) return;
     
-    // Create a new buffer source for each play
-    const source = this.audioContext.createBufferSource();
-    source.buffer = this.gongBuffer;
-    
-    // Create gain node for volume control
-    const gainNode = this.audioContext.createGain();
-    gainNode.gain.value = 1.0; // Full volume
-    
-    // Create convolver (reverb)
-    const convolver = this.audioContext.createConvolver();
-    
-    // Create a custom impulse response for the reverb
-    const reverbSeconds = 3.0;
-    const sampleRate = this.audioContext.sampleRate;
-    const length = sampleRate * reverbSeconds;
-    const impulse = this.audioContext.createBuffer(2, length, sampleRate);
-    const leftChannel = impulse.getChannelData(0);
-    const rightChannel = impulse.getChannelData(1);
-    
-    // Create an impulse response with an exponential decay
-    for (let i = 0; i < length; i++) {
-      const decay = Math.pow(0.01, i / length);
-      leftChannel[i] = (Math.random() * 2 - 1) * decay;
-      rightChannel[i] = (Math.random() * 2 - 1) * decay;
+    try {
+      // Resume context if suspended
+      if (this.audioContext.state === 'suspended') {
+        this.audioContext.resume();
+      }
+      
+      // Create a new buffer source for each play
+      const source = this.audioContext.createBufferSource();
+      source.buffer = this.gongBuffer;
+      
+      // Create gain node for volume control
+      const gainNode = this.audioContext.createGain();
+      gainNode.gain.value = 1.0; // Full volume
+      
+      // Create convolver (reverb)
+      const convolver = this.audioContext.createConvolver();
+      
+      // Create a custom impulse response for the reverb (like the reference)
+      const reverbSeconds = 3.0;
+      const sampleRate = this.audioContext.sampleRate;
+      const length = sampleRate * reverbSeconds;
+      const impulse = this.audioContext.createBuffer(2, length, sampleRate);
+      const leftChannel = impulse.getChannelData(0);
+      const rightChannel = impulse.getChannelData(1);
+      
+      // Create an impulse response with an exponential decay
+      for (let i = 0; i < length; i++) {
+        const decay = Math.pow(0.01, i / length);
+        leftChannel[i] = (Math.random() * 2 - 1) * decay;
+        rightChannel[i] = (Math.random() * 2 - 1) * decay;
+      }
+      
+      convolver.buffer = impulse;
+      
+      // Create a delay node for echo effect (like reference)
+      const delay = this.audioContext.createDelay();
+      delay.delayTime.value = 0.3; // 300ms delay
+      
+      // Create a feedback for the delay
+      const feedbackGain = this.audioContext.createGain();
+      feedbackGain.gain.value = 0.4; // 40% feedback
+      
+      // Connect everything
+      source.connect(gainNode);
+      gainNode.connect(convolver);
+      convolver.connect(this.audioContext.destination);
+      
+      // Add delay loop for lingering echo effect (like reference)
+      gainNode.connect(delay);
+      delay.connect(feedbackGain);
+      feedbackGain.connect(delay);
+      delay.connect(this.audioContext.destination);
+      
+      // Start the sound
+      source.start();
+    } catch (e) {
+      console.error('Error playing resonant gong:', e);
     }
-    
-    convolver.buffer = impulse;
-    
-    // Create a delay node for echo effect
-    const delay = this.audioContext.createDelay();
-    delay.delayTime.value = 0.3; // 300ms delay
-    
-    // Create a feedback for the delay
-    const feedbackGain = this.audioContext.createGain();
-    feedbackGain.gain.value = 0.4; // 40% feedback
-    
-    // Connect everything
-    source.connect(gainNode);
-    gainNode.connect(convolver);
-    convolver.connect(this.audioContext.destination);
-    
-    // Add delay loop
-    gainNode.connect(delay);
-    delay.connect(feedbackGain);
-    feedbackGain.connect(delay);
-    delay.connect(this.audioContext.destination);
-    
-    // Start the sound
-    source.start();
   },
   
   destroy() {
@@ -189,30 +218,123 @@ const AudioService = {
 // Keep Awake service
 const KeepAwakeService = {
   wakeLock: null,
+  noSleepVideo: null,
+  noSleepTimer: null,
+  enabled: false,
+  
+  // Check if we're on an iOS device that needs special handling
+  isIOS() {
+    return typeof navigator !== 'undefined' && 
+      parseFloat(('' + (/CPU.*OS ([0-9_]{3,4})[0-9_]{0,1}|(CPU like).*AppleWebKit.*Mobile/i.exec(navigator.userAgent) || [0, ''])[1])
+        .replace('undefined', '3_2').replace('_', '.').replace('_', '')) < 10 && 
+      !window.MSStream;
+  },
+  
+  // Check if wake lock API is supported
+  isWakeLockSupported() {
+    return 'wakeLock' in navigator;
+  },
+  
+  // Add video source for iOS fallback
+  _addSourceToVideo(video, type, dataUri) {
+    const source = document.createElement('source');
+    source.src = dataUri;
+    source.type = `video/${type}`;
+    video.appendChild(source);
+  },
   
   async enable() {
     console.log('Enabling screen wake lock');
+    
+    if (this.enabled) return;
+    
     try {
-      if ('wakeLock' in navigator) {
+      if (this.isWakeLockSupported()) {
+        // Modern wake lock API approach
         this.wakeLock = await navigator.wakeLock.request('screen');
-        console.log('Wake Lock active');
+        this.enabled = true;
+        console.log('Wake Lock active.');
+        
         this.wakeLock.addEventListener('release', () => {
-          console.log('Wake Lock released');
+          console.log('Wake Lock released.');
+          this.enabled = false;
         });
+      } else if (this.isIOS()) {
+        // iOS fallback using timer
+        this.destroy(); // Clean up any existing timer
+        
+        console.warn(`
+          Using timer-based wake lock for older iOS devices.
+          This can interrupt active or long-running network requests.
+        `);
+        
+        this.noSleepTimer = window.setInterval(() => {
+          if (document.hidden) return;
+          
+          window.location.href = window.location.href.split('#')[0];
+          window.setTimeout(window.stop, 0);
+        }, 15000);
+        
+        this.enabled = true;
       } else {
-        console.warn('Wake Lock API not supported');
+        // Video-based fallback for other browsers
+        if (!this.noSleepVideo) {
+          this.noSleepVideo = document.createElement('video');
+          this.noSleepVideo.setAttribute('title', 'No Sleep');
+          this.noSleepVideo.setAttribute('playsinline', '');
+          
+          // Add fake video sources to keep screen on
+          // Using empty MP4 and WebM data URIs (shortened for brevity)
+          const webmBase64 = 'GkXfowEAAAAAAAAfQoaBAUL3gQFC8oEEQvOBCEKChHdlYm1Ch4EEQoWBAhhTgGcBAA...';
+          const mp4Base64 = 'AAAAHGZ0eXBNNFYgAAACAGlzb21pc28yYXZjMQAAAAhmcmVlAAAGF21kYXTeBAAAbGliZmFhY...';
+          
+          this._addSourceToVideo(this.noSleepVideo, 'webm', `data:video/webm;base64,${webmBase64}`);
+          this._addSourceToVideo(this.noSleepVideo, 'mp4', `data:video/mp4;base64,${mp4Base64}`);
+          
+          this.noSleepVideo.addEventListener('loadedmetadata', () => {
+            if (this.noSleepVideo.duration <= 1) {
+              // If video is very short, loop it
+              this.noSleepVideo.setAttribute('loop', '');
+            } else {
+              // Otherwise, reset the time periodically to keep playing
+              this.noSleepVideo.addEventListener('timeupdate', () => {
+                if (this.noSleepVideo.currentTime > 0.5) {
+                  this.noSleepVideo.currentTime = Math.random();
+                }
+              });
+            }
+          });
+        }
+        
+        try {
+          await this.noSleepVideo.play();
+          this.enabled = true;
+        } catch (err) {
+          console.error('Video wake lock error:', err);
+          this.enabled = false;
+        }
       }
     } catch (err) {
       console.error(`Wake Lock error: ${err.name}, ${err.message}`);
+      this.enabled = false;
     }
   },
   
   destroy() {
     console.log('Releasing wake lock');
-    if (this.wakeLock) {
+    
+    if (this.isWakeLockSupported() && this.wakeLock) {
       this.wakeLock.release();
       this.wakeLock = null;
+    } else if (this.isIOS() && this.noSleepTimer) {
+      console.warn('Disabling iOS wake lock.');
+      window.clearInterval(this.noSleepTimer);
+      this.noSleepTimer = null;
+    } else if (this.noSleepVideo) {
+      this.noSleepVideo.pause();
     }
+    
+    this.enabled = false;
   }
 };
 
@@ -242,6 +364,7 @@ const Store = {
   },
   
   start() {
+    console.log('Starting session timer');
     this.startedAtSeconds = Math.floor(Date.now() / 1000);
     this.timeElapsedSeconds = 0;
     this.timerCompletedAt = 0;
@@ -250,8 +373,13 @@ const Store = {
   },
   
   stop() {
-    console.log('Stopping session');
-    this.timerActive = false;
+    if (this.timerActive) {
+      console.log('Stopping session');
+      this.timerActive = false;
+      // Reset timer state
+      this.timeElapsedSeconds = 0;
+      this.timeLeftSeconds = this.durationSeconds;
+    }
   },
   
   tick() {
@@ -265,10 +393,22 @@ const Store = {
       this.timeLeftSeconds = 0;
     }
     
+    // Log every second like reference app
+    console.log({newTimeElapsedSeconds: this.timeElapsedSeconds});
+    
     // Record when timer completed
     if (this.timeLeftSeconds === 0 && this.timerCompletedAt === 0) {
       this.timerCompletedAt = now;
     }
+  },
+  
+  reset() {
+    console.log('Resetting timer state');
+    this.timerActive = false;
+    this.timeElapsedSeconds = 0;
+    this.timeLeftSeconds = this.durationSeconds;
+    this.timerCompletedAt = 0;
+    this.soundPlayedForMinute = {};
   }
 };
 
@@ -354,7 +494,7 @@ function createSpacer() {
 // Views
 const Views = {
   setup(onNext) {
-    const view = createElement('div', ['view', 'view-entering']);
+    const view = createElement('div', ['view']);
     
     const homepageContent = createElement('div', 'homepage-content');
     
@@ -392,7 +532,9 @@ const Views = {
     
     const startButtonContainer = createElement('div', 'start-button-container');
     const startButton = createButton('Start', () => {
+      // Pre-arm audio before transitioning
       AudioService.arm().then(() => {
+        // Direct transition without animation
         renderView('instructions');
       });
     });
@@ -407,7 +549,7 @@ const Views = {
   },
 
   instructions(onNext) {
-    const view = createElement('div', ['view', 'instructions-view', 'view-entering']);
+    const view = createElement('div', ['view', 'instructions-view']);
     
     const instructionsContainer = createElement('div', 'instructions-container');
     
@@ -416,9 +558,6 @@ const Views = {
     instructionsContainer.appendChild(instructionsText);
     
     const okButton = createButton('OK', async () => {
-      view.classList.remove('view-entering');
-      view.classList.add('view-exiting');
-      
       KeepAwakeService.enable();
       
       try {
@@ -427,21 +566,19 @@ const Views = {
         await AudioService.arm();
         await AudioService.play();
         
-        // Request fullscreen after animating out current view
-        setTimeout(async () => {
-          try {
-            if (document.documentElement.requestFullscreen) {
-              await document.documentElement.requestFullscreen().catch(e => {
-                console.log('Fullscreen failed, but continuing');
-              });
-            }
-            // Immediately transition to active view
-            renderView('active');
-          } catch (err) {
-            console.error('Error during fullscreen transition:', err);
-            renderView('active');
+        // Request fullscreen if supported
+        try {
+          if (document.documentElement.requestFullscreen) {
+            await document.documentElement.requestFullscreen().catch(e => {
+              console.log('Fullscreen failed, but continuing');
+            });
           }
-        }, 300);
+        } catch (err) {
+          console.error('Error during fullscreen transition:', err);
+        }
+        
+        // Direct transition to active view without animation
+        renderView('active');
       } catch (err) {
         console.error('Error during transition:', err);
         renderView('active');
@@ -456,7 +593,7 @@ const Views = {
   },
   
   active(onNext) {
-    const view = createElement('div', ['view', 'view-entering']);
+    const view = createElement('div', ['view']);
     
     const timeDisplay = createText('', { dimmed: true, size: 'xs', inline: true });
     view.appendChild(timeDisplay);
@@ -471,10 +608,14 @@ const Views = {
     
     const bottomControls = createElement('div', 'bottom-controls');
     const finishEarlyButton = createButton('Finish early', () => {
-      view.classList.remove('view-entering');
-      view.classList.add('view-exiting');
-      Store.stop(); // Stop the timer
-      setTimeout(() => renderView('complete'), 1000);
+      // Stop the timer
+      Store.stop();
+      
+      // Clean up audio service
+      AudioService.destroy();
+      
+      // Direct transition without animation
+      renderView('complete');
     }, 'secondary');
     
     bottomControls.appendChild(finishEarlyButton);
@@ -484,7 +625,26 @@ const Views = {
     Store.start();
     let timerCompleted = false;
     
-    const timerInterval = setInterval(() => {
+    // Store the timer interval ID for cleanup
+    let timerInterval;
+    const cleanupActiveSession = () => {
+      console.log('Cleaning up active session');
+      // Clear the interval to stop timer updates
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+      // Make sure timer is stopped
+      Store.stop();
+    };
+    
+    // Set up the timer
+    timerInterval = setInterval(() => {
+      // Only update if timer is still active
+      if (!Store.timerActive) {
+        return;
+      }
+      
       Store.tick();
       
       // Update display
@@ -513,11 +673,10 @@ const Views = {
           // Replace "finish early" with "finish" button if not already done
           bottomControls.innerHTML = '';
           const finishButton = createButton('Finish', () => {
-            clearInterval(timerInterval);
-            Store.stop(); // Stop the timer
-            view.classList.remove('view-entering');
-            view.classList.add('view-exiting');
-            setTimeout(() => renderView('complete'), 1000);
+            cleanupActiveSession();
+            
+            // Direct transition without animation
+            renderView('complete');
           }, 'secondary');
           
           bottomControls.appendChild(finishButton);
@@ -541,22 +700,40 @@ const Views = {
       }
     }, 1000);
     
-    // Cleanup on view change
+    // Add proper cleanup
     view.addEventListener('animationend', (e) => {
       if (e.animationName === 'view-exit') {
-        clearInterval(timerInterval);
-        Store.stop(); // Ensure timer is stopped
+        // Run cleanup when the view is exiting
+        cleanupActiveSession();
       }
     });
+    
+    // Store cleanup function on the view itself for access from elsewhere
+    view.cleanup = cleanupActiveSession;
     
     return view;
   },
   
   complete(onNext) {
-    const view = createElement('div', ['view', 'view-entering']);
+    const view = createElement('div', ['view']);
     
-    // Make sure the timer is stopped
+    // Make sure the timer is stopped and audio is fully destroyed
     Store.stop();
+    AudioService.destroy();
+    
+    // Double-check and force stop any lingering audio contexts
+    if (window.audioContextsToClose) {
+      window.audioContextsToClose.forEach(ctx => {
+        try {
+          if (ctx && ctx.state !== 'closed') {
+            ctx.close();
+          }
+        } catch (e) {
+          console.log('Error closing audio context:', e);
+        }
+      });
+      window.audioContextsToClose = [];
+    }
     
     const thankYouSection = createElement('div', 'thank-you');
     
@@ -564,7 +741,7 @@ const Views = {
     thankYouSection.appendChild(thankYouText);
     
     const linkList = createElement('div', 'link-list');
-    const aboutLink = createText('<a target="_blank" href="about.html">About</a>', { 
+    const aboutLink = createText('<a target="_blank" href="/about">About</a>', { 
       inline: true, size: 's' 
     });
     const sayHiLink = createText('<a target="_blank" href="https://www.linkedin.com/in/chandu-machineni">Say Hi</a>', { 
@@ -579,13 +756,11 @@ const Views = {
     
     const bottomControls = createElement('div', 'bottom-controls');
     const restartButton = createButton('Back to start', () => {
-      view.classList.remove('view-entering');
-      view.classList.add('view-exiting');
-      
       // Reinitialize AudioService when going back to start
       AudioService.init();
       
-      setTimeout(() => renderView('setup'), 1000);
+      // Direct transition without animation
+      renderView('setup');
     });
     
     bottomControls.appendChild(restartButton);
@@ -601,46 +776,96 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentView = null;
   let currentState = 'setup';
   
-  // Global function for rendering views
+  // Global function for rendering views with animations
   window.renderView = (state) => {
+    // Prevent double renders of the same state
+    if (state === currentState && currentView) return;
+    
+    // If there's a current view, animate it out first
     if (currentView) {
-      root.removeChild(currentView);
-    }
-    
-    // Clean up any timers or sounds when changing views
-    if (currentState === 'active' && state !== 'active') {
-      Store.stop(); // Stop any active timers
-    }
-    
-    currentState = state;
-    
-    // Always reinitialize audio when changing views
-    if (state === 'setup') {
-      AudioService.init();
-      Store.stop(); // Ensure no timers are running
-    }
-    
-    switch (state) {
-      case 'setup':
-        currentView = Views.setup();
-        break;
-      case 'instructions':
-        // Reinitialize audio before instructions view
-        AudioService.init();
-        currentView = Views.instructions();
-        break;
-      case 'active':
-        currentView = Views.active();
-        break;
-      case 'complete':
+      // Manually run cleanup if we're transitioning from active view
+      if (currentState === 'active' && currentView.cleanup) {
+        console.log('Executing active view cleanup during transition');
+        currentView.cleanup();
+      }
+      
+      // Always clean up audio when leaving active view
+      if (currentState === 'active' && state !== 'active') {
+        console.log('Transitioning from active view - cleaning up audio');
         AudioService.destroy();
-        KeepAwakeService.destroy();
-        Store.stop(); // Ensure timer is stopped
-        currentView = Views.complete();
-        break;
+      }
+      
+      // Add exiting animation
+      currentView.classList.add('view-exiting');
+      currentView.addEventListener('animationend', function handleExit() {
+        // Once exit animation is complete, remove the view and add new one
+        currentView.removeEventListener('animationend', handleExit);
+        
+        // Remove view from DOM
+        root.removeChild(currentView);
+        currentView = null;
+        
+        // Now proceed with adding the new view
+        renderNewView();
+      }, { once: true });
+    } else {
+      // No current view, just render the new one
+      renderNewView();
     }
     
-    root.appendChild(currentView);
+    function renderNewView() {
+      // Update state
+      currentState = state;
+      
+      // Prepare the new view based on state
+      switch (state) {
+        case 'setup':
+          // Initialize audio but make sure we start from a clean state
+          AudioService.destroy();
+          AudioService.init();
+          
+          // Make sure timer is stopped
+          Store.stop();
+          
+          // Ensure wake lock is released
+          KeepAwakeService.destroy();
+          
+          currentView = Views.setup();
+          break;
+        case 'instructions':
+          // Initialize audio but don't destroy previous instance
+          AudioService.init();
+          currentView = Views.instructions();
+          break;
+        case 'active':
+          currentView = Views.active();
+          break;
+        case 'complete':
+          // Ensure audio is fully destroyed
+          AudioService.destroy();
+          
+          // Release wake lock
+          KeepAwakeService.destroy();
+          
+          // Ensure timer is stopped
+          Store.stop();
+          
+          currentView = Views.complete();
+          break;
+      }
+      
+      // Add new view with animation
+      if (currentView) {
+        currentView.classList.add('view-entering');
+        root.appendChild(currentView);
+        
+        // Remove the entering class after animation completes
+        currentView.addEventListener('animationend', function handleEnter() {
+          currentView.removeEventListener('animationend', handleEnter);
+          currentView.classList.remove('view-entering');
+        }, { once: true });
+      }
+    }
   };
   
   // Initialize the app
