@@ -602,6 +602,9 @@ const Views = {
     Store.stop();
     AudioService.destroy();
     
+    // Add header with relax text
+    view.appendChild(createHeader());
+    
     const thankYouSection = createElement('div', 'thank-you');
     
     const thankYouText = createText('Thanks! Come again any time.', { inline: true });
@@ -642,6 +645,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const root = document.getElementById('root');
   let currentView = null;
   let currentState = 'setup';
+  
+  // Check URL for view parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialView = urlParams.get('view');
   
   // Global function for rendering views with animations
   window.renderView = (state) => {
@@ -738,5 +745,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize the app
   AudioService.init();
   Store.stop(); // Ensure timer is stopped initially
-  renderView('setup');
+  
+  // Start with the requested view or default to setup
+  renderView(initialView === 'complete' ? 'complete' : 'setup');
 }); 
