@@ -4,10 +4,7 @@ document.head.innerHTML += '<link rel="stylesheet" href="styles.css">';
 // Audio service
 const AudioService = {
   audioElement: null,
-  audioContext: null,
-  gongBuffer: null,
-  // Use local gong sound file instead of remote URL (to avoid CORS issues)
-  gongSound: 'gong.mp3',
+  gongSound: 'gong.mp3', // Local Tibetan meditation sound file
   lastPlayTime: 0,
   
   init() {
@@ -15,45 +12,6 @@ const AudioService = {
     // Clean up any previous instance
     this.destroy();
     this.createAudio();
-    
-    // Initialize Web Audio API if supported
-    try {
-      if (typeof AudioContext !== 'undefined') {
-        this.audioContext = new AudioContext();
-        
-        // Track all audio contexts created for cleanup
-        if (!window.audioContextsToClose) {
-          window.audioContextsToClose = [];
-        }
-        window.audioContextsToClose.push(this.audioContext);
-        
-        // Preload the gong sound for Web Audio API
-        this.loadGongSound();
-      }
-    } catch(e) {
-      console.log('Web Audio API not supported, falling back to simple audio');
-    }
-  },
-  
-  loadGongSound() {
-    console.log('Loading gong sound for Web Audio API');
-    if (!this.audioContext) return;
-    
-    fetch(this.gongSound)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        return response.arrayBuffer();
-      })
-      .then(arrayBuffer => this.audioContext.decodeAudioData(arrayBuffer))
-      .then(audioBuffer => {
-        this.gongBuffer = audioBuffer;
-        console.log('Gong sound loaded successfully');
-      })
-      .catch(error => {
-        console.log('Error loading gong sound:', error);
-      });
   },
   
   createAudio() {
@@ -61,7 +19,7 @@ const AudioService = {
     // Create a new audio element each time
     this.audioElement = new Audio();
     this.audioElement.src = this.gongSound;
-    // Preload the sound
+    this.audioElement.preload = 'auto';
     this.audioElement.load();
   },
   
@@ -79,14 +37,9 @@ const AudioService = {
       this.audioElement.currentTime = 0;
       this.audioElement.volume = 1.0; // Maximum volume
       
-      // Also ensure Web Audio API is ready if available
-      if (this.audioContext && this.audioContext.state === 'suspended') {
-        await this.audioContext.resume();
-      }
-      
       console.log('Audio element armed.');
-    } catch(e) {
-      console.log('Arm sound failed, but continuing', e);
+    } catch (e) {
+      console.log('Error arming audio:', e);
     }
     return Promise.resolve(); // Always resolve to continue the flow
   },
@@ -99,13 +52,7 @@ const AudioService = {
       if (now - this.lastPlayTime > 500) {
         this.lastPlayTime = now;
         
-        // Try to play using Web Audio API for better sound if available
-        if (this.audioContext && this.gongBuffer) {
-          this.playResonantGong();
-          return Promise.resolve();
-        }
-        
-        // Fallback to regular audio element
+        // Ensure we have an audio element
         if (!this.audioElement) {
           this.createAudio();
         }
@@ -129,88 +76,11 @@ const AudioService = {
     return Promise.resolve(); // Always resolve to continue the flow
   },
   
-  playResonantGong() {
-    console.log('Playing resonant gong with Web Audio API');
-    if (!this.audioContext || !this.gongBuffer) return;
-    
-    try {
-      // Resume context if suspended
-      if (this.audioContext.state === 'suspended') {
-        this.audioContext.resume();
-      }
-      
-      // Create a new buffer source for each play
-      const source = this.audioContext.createBufferSource();
-      source.buffer = this.gongBuffer;
-      
-      // Create gain node for volume control
-      const gainNode = this.audioContext.createGain();
-      gainNode.gain.value = 1.0; // Full volume
-      
-      // Create convolver (reverb)
-      const convolver = this.audioContext.createConvolver();
-      
-      // Create a custom impulse response for the reverb (like the reference)
-      const reverbSeconds = 3.0;
-      const sampleRate = this.audioContext.sampleRate;
-      const length = sampleRate * reverbSeconds;
-      const impulse = this.audioContext.createBuffer(2, length, sampleRate);
-      const leftChannel = impulse.getChannelData(0);
-      const rightChannel = impulse.getChannelData(1);
-      
-      // Create an impulse response with an exponential decay
-      for (let i = 0; i < length; i++) {
-        const decay = Math.pow(0.01, i / length);
-        leftChannel[i] = (Math.random() * 2 - 1) * decay;
-        rightChannel[i] = (Math.random() * 2 - 1) * decay;
-      }
-      
-      convolver.buffer = impulse;
-      
-      // Create a delay node for echo effect (like reference)
-      const delay = this.audioContext.createDelay();
-      delay.delayTime.value = 0.3; // 300ms delay
-      
-      // Create a feedback for the delay
-      const feedbackGain = this.audioContext.createGain();
-      feedbackGain.gain.value = 0.4; // 40% feedback
-      
-      // Connect everything
-      source.connect(gainNode);
-      gainNode.connect(convolver);
-      convolver.connect(this.audioContext.destination);
-      
-      // Add delay loop for lingering echo effect (like reference)
-      gainNode.connect(delay);
-      delay.connect(feedbackGain);
-      feedbackGain.connect(delay);
-      delay.connect(this.audioContext.destination);
-      
-      // Start the sound
-      source.start();
-    } catch (e) {
-      console.error('Error playing resonant gong:', e);
-    }
-  },
-  
   destroy() {
     console.log('Destroying audio service');
     if (this.audioElement) {
       this.audioElement.pause();
       this.audioElement = null;
-    }
-    
-    // Clean up Web Audio API resources
-    if (this.audioContext) {
-      if (this.audioContext.state !== 'closed') {
-        try {
-          this.audioContext.close();
-        } catch(e) {
-          console.log('Error closing audio context:', e);
-        }
-      }
-      this.audioContext = null;
-      this.gongBuffer = null;
     }
   }
 };
@@ -720,20 +590,6 @@ const Views = {
     // Make sure the timer is stopped and audio is fully destroyed
     Store.stop();
     AudioService.destroy();
-    
-    // Double-check and force stop any lingering audio contexts
-    if (window.audioContextsToClose) {
-      window.audioContextsToClose.forEach(ctx => {
-        try {
-          if (ctx && ctx.state !== 'closed') {
-            ctx.close();
-          }
-        } catch (e) {
-          console.log('Error closing audio context:', e);
-        }
-      });
-      window.audioContextsToClose = [];
-    }
     
     const thankYouSection = createElement('div', 'thank-you');
     
