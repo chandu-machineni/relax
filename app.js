@@ -648,7 +648,23 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Check URL for view parameter
   const urlParams = new URLSearchParams(window.location.search);
-  const initialView = urlParams.get('view');
+  const urlView = urlParams.get('view');
+  
+  // Clean up URL if it has a view parameter
+  if (urlView) {
+    // Use history API to replace the URL without parameters
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+  
+  // Check sessionStorage for saved view
+  const storedView = sessionStorage.getItem('initialView');
+  if (storedView) {
+    // Clear the stored view so it's not reused on refresh
+    sessionStorage.removeItem('initialView');
+  }
+  
+  // Determine which view to show
+  const initialView = urlView || storedView;
   
   // Global function for rendering views with animations
   window.renderView = (state) => {

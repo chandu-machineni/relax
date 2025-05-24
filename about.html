@@ -116,7 +116,7 @@
   </div>
   
   <div class="about-container">
-    <a href="/?view=complete" class="back-link">
+    <a href="/" class="back-link" id="back-button">
       <span class="back-arrow">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
           <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
@@ -167,11 +167,17 @@
       window.location.href = '/';
     }
     
-    // Ensure back button is clickable
+    // Handle back button click to go to completion page
     document.addEventListener('DOMContentLoaded', function() {
-      const backButton = document.querySelector('.back-link');
+      const backButton = document.querySelector('#back-button');
       backButton.addEventListener('click', function(e) {
-        window.location.href = this.getAttribute('href');
+        e.preventDefault(); // Prevent default navigation
+        
+        // Store view state in sessionStorage for the main page to read
+        sessionStorage.setItem('initialView', 'complete');
+        
+        // Navigate to home page
+        window.location.href = '/';
       });
     });
   </script>
