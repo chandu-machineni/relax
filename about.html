@@ -65,6 +65,9 @@
       border: 1px solid rgba(255, 255, 255, 0.3);
       color: #ffffff;
       transition: 0.3s all;
+      cursor: pointer;
+      position: relative;
+      z-index: 10;
     }
     
     .back-link:hover {
@@ -78,6 +81,7 @@
       justify-content: center;
       width: 24px;
       height: 24px;
+      pointer-events: none;
     }
     
     /* Reset specific paragraph margins */
@@ -95,6 +99,8 @@
       text-align: center;
       margin-top: 20px;
       margin-bottom: 20px;
+      position: relative;
+      z-index: 5;
     }
     
     .app-title {
@@ -160,6 +166,14 @@
       // Redirect to home if accessed via an incorrect route
       window.location.href = '/';
     }
+    
+    // Ensure back button is clickable
+    document.addEventListener('DOMContentLoaded', function() {
+      const backButton = document.querySelector('.back-link');
+      backButton.addEventListener('click', function(e) {
+        window.location.href = this.getAttribute('href');
+      });
+    });
   </script>
 </body>
 </html> 
