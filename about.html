@@ -19,7 +19,7 @@
     .about-container {
       max-width: 480px;
       margin: 0 auto;
-      padding: 40px 20px;
+      padding: 20px;
       text-align: left;
       font-size: 18px;
       line-height: 1.6;
@@ -56,7 +56,6 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 20px;
       text-decoration: none;
       width: 32px;
       height: 32px;
@@ -96,34 +95,51 @@
     
     /* Header styles */
     .header {
-      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       margin-top: 20px;
       margin-bottom: 20px;
       position: relative;
       z-index: 5;
+      width: 100%;
     }
     
     .app-title {
       font-size: 20px;
       font-weight: normal;
       margin: 0;
+      flex-grow: 1;
+      text-align: center;
+    }
+    
+    .header-left {
+      width: 32px;
+      padding-left: 20px;
+    }
+    
+    .header-right {
+      width: 32px;
+      padding-right: 20px;
     }
   </style>
 </head>
 <body>
   <div class="header">
+    <div class="header-left">
+      <a href="/" class="back-link" id="back-button">
+        <span class="back-arrow">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+          </svg>
+        </span>
+      </a>
+    </div>
     <h1 class="app-title"><em>relax</em></h1>
+    <div class="header-right"></div>
   </div>
   
   <div class="about-container">
-    <a href="/" class="back-link" id="back-button">
-      <span class="back-arrow">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-        </svg>
-      </span>
-    </a>
-    
     <p><span class="bold">Relax.</span> is a tiny, quiet space on the internet.</p>
     
     <p>This app was built as a reminder:<br>
